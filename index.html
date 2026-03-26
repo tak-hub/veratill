@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Veratill Pro</title>
+<title>Takushop POS</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -17,10 +17,10 @@ body {
 </style>
 </head>
 
-<body class="flex h-screen">
+<body class="flex flex-col md:flex-row h-screen">
 
 <!-- LOGIN -->
-<div id="loginScreen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60">
+<div id="loginScreen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50">
 <div class="bg-white p-6 rounded w-80">
 <h2 class="text-xl font-bold text-[#800020]">Login</h2>
 <input id="username" placeholder="Username" class="w-full border p-2 mt-2">
@@ -30,38 +30,59 @@ body {
 </div>
 
 <!-- LEFT -->
-<div class="w-3/4 p-4 overflow-auto">
-<h1 class="text-2xl font-bold text-[#800020] mb-3">
+<div class="w-full md:w-3/4 p-3 overflow-auto">
+
+<h1 class="text-xl md:text-2xl font-bold text-[#800020] mb-2">
 <i class="fa-solid fa-cash-register"></i> Takushop POS
 </h1>
 
-<input id="search" placeholder="Search or scan barcode..." class="w-full p-2 border rounded mb-3">
+<input id="search" placeholder="Search or scan barcode..."
+ class="w-full p-2 border rounded mb-3">
 
-<div id="products" class="grid grid-cols-4 gap-4"></div>
+<div id="products" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"></div>
+
 </div>
 
 <!-- RIGHT -->
-<div class="w-1/4 bg-white p-4 flex flex-col shadow-lg">
-<h2 class="font-bold text-[#800020]"><i class="fa-solid fa-cart-shopping"></i> Cart</h2>
+<div class="w-full md:w-1/4 bg-white p-3 flex flex-col shadow-lg">
+
+<h2 class="font-bold text-[#800020]">
+<i class="fa-solid fa-cart-shopping"></i> Cart
+</h2>
+
 <div id="cart" class="flex-1 overflow-auto mt-2"></div>
 
-<label class="flex items-center gap-2">
+<!-- PAYMENT METHODS -->
+<div class="mt-2">
+<p class="font-bold">Payment Method:</p>
+
+<select id="paymentMethod" class="w-full border p-2 mt-1">
+<option value="Cash">Cash</option>
+<option value="Card">Card</option>
+<option value="Mobile Money">Mobile Money</option>
+</select>
+</div>
+
+<label class="flex items-center gap-2 mt-2">
 <input type="checkbox" id="tax"> Tax (15%)
 </label>
 
-<h3 class="font-bold mt-2">Total: $<span id="total">0.00</span></h3>
+<h3 class="font-bold mt-2">
+Total: $<span id="total">0.00</span>
+</h3>
 
-<button onclick="checkout()" class="bg-[#800020] text-white p-2 mt-2">
+<button onclick="checkout()" class="bg-[#800020] text-white p-3 mt-2">
 <i class="fa-solid fa-money-bill"></i> Pay
 </button>
 
-<button onclick="showDashboard()" class="bg-gray-300 p-2 mt-2">
+<button onclick="showDashboard()" class="bg-gray-300 p-3 mt-2">
 <i class="fa-solid fa-chart-line"></i> Dashboard
 </button>
+
 </div>
 
 <!-- DASHBOARD -->
-<div id="dashboard" class="hidden fixed inset-0 bg-white p-5 overflow-auto">
+<div id="dashboard" class="hidden fixed inset-0 bg-white p-5 overflow-auto z-50">
 <h2 class="text-2xl text-[#800020] font-bold">Sales Dashboard</h2>
 <div id="stats" class="my-3"></div>
 <div id="transactions"></div>
@@ -72,8 +93,8 @@ body {
 
 // USERS
 const users = [
- {username:"admin", password:"1234", role:"admin"},
- {username:"cashier", password:"1234", role:"cashier"}
+ {username:"admin", password:"1234"},
+ {username:"cashier", password:"1234"}
 ];
 
 let currentUser = null;
@@ -95,24 +116,23 @@ let cart = {};
 
 // LOGIN
 function login(){
- let u = document.getElementById("username").value;
- let p = document.getElementById("password").value;
+ let u = username.value;
+ let p = password.value;
 
  let user = users.find(x=>x.username===u && x.password===p);
 
  if(!user) return alert("Invalid login");
 
  currentUser = user;
- document.getElementById("loginScreen").style.display="none";
+ loginScreen.style.display="none";
 }
 
 // PRODUCTS
 function renderProducts(list=products){
- let el = document.getElementById("products");
- el.innerHTML="";
+ productsDiv.innerHTML="";
 
  list.forEach(p=>{
-  el.innerHTML += `
+  productsDiv.innerHTML+=`
   <div onclick="addToCart(${p.id})"
   class="bg-white p-3 rounded shadow cursor-pointer">
 
@@ -125,7 +145,6 @@ function renderProducts(list=products){
  });
 }
 
-// CART
 function addToCart(id){
  let p = products.find(x=>x.id===id);
  if(p.stock<=0) return alert("Out of stock");
@@ -139,16 +158,16 @@ function addToCart(id){
  renderCart();
 }
 
+// CART
 function renderCart(){
- let el=document.getElementById("cart");
- el.innerHTML="";
+ cartDiv.innerHTML="";
  let total=0;
 
  Object.values(cart).forEach(item=>{
   let sub=item.qty*item.price;
   total+=sub;
 
-  el.innerHTML+=`
+  cartDiv.innerHTML+=`
   <div class="flex justify-between items-center border-b py-1">
   <span>${item.name} x${item.qty}</span>
 
@@ -161,9 +180,9 @@ function renderCart(){
   </div>`;
  });
 
- if(document.getElementById("tax").checked) total*=1.15;
+ if(tax.checked) total*=1.15;
 
- document.getElementById("total").innerText=total.toFixed(2);
+ totalSpan.innerText=total.toFixed(2);
 }
 
 function changeQty(id,val){
@@ -181,13 +200,20 @@ function changeQty(id,val){
  renderCart();
 }
 
-// SEARCH / BARCODE
-document.getElementById("search").addEventListener("input",e=>{
+// 🔍 SEARCH + BARCODE AUTO ADD
+search.addEventListener("input", e=>{
  let val=e.target.value;
 
+ // barcode exact match → auto add
+ let barcodeMatch = products.find(p=>p.barcode===val);
+ if(barcodeMatch){
+   addToCart(barcodeMatch.id);
+   search.value="";
+   return;
+ }
+
  let filtered=products.filter(p=>
- p.name.toLowerCase().includes(val.toLowerCase()) ||
- p.barcode.includes(val)
+ p.name.toLowerCase().includes(val.toLowerCase())
  );
 
  renderProducts(filtered);
@@ -204,40 +230,43 @@ function getReceiptNumber(){
 function checkout(){
  if(Object.keys(cart).length===0) return alert("Empty cart");
 
- let total=document.getElementById("total").innerText;
+ let total = totalSpan.innerText;
+ let method = paymentMethod.value;
 
- saveTransaction(total);
- generatePDF(total);
+ saveTransaction(total, method);
+ generatePDF(total, method);
 
  cart={};
  renderCart();
 }
 
 // SAVE TX
-function saveTransaction(total){
+function saveTransaction(total, method){
  let data=JSON.parse(localStorage.getItem("tx"))||[];
  data.push({
  date:new Date().toLocaleString(),
- total
+ total,
+ method
  });
  localStorage.setItem("tx",JSON.stringify(data));
 }
 
 // PDF RECEIPT
-function generatePDF(total){
+function generatePDF(total, method){
  const { jsPDF } = window.jspdf;
  let doc = new jsPDF();
 
  let receiptNo = getReceiptNumber();
  let date = new Date().toLocaleString();
 
- doc.text("TAKUSHOP", 20,20);
+ doc.text("TAKUSHOP",20,20);
  doc.text("Cashier: "+currentUser.username,20,30);
+ doc.text("Payment: "+method,20,40);
 
- doc.text("Receipt No: "+receiptNo,20,40);
- doc.text("Date: "+date,20,50);
+ doc.text("Receipt No: "+receiptNo,20,50);
+ doc.text("Date: "+date,20,60);
 
- let y=60;
+ let y=70;
 
  Object.values(cart).forEach(item=>{
  doc.text(`${item.name} x${item.qty} - $${item.price}`,20,y);
@@ -254,30 +283,34 @@ function generatePDF(total){
 // DASHBOARD
 function showDashboard(){
  let data=JSON.parse(localStorage.getItem("tx"))||[];
- let el=document.getElementById("transactions");
 
  let revenue=data.reduce((a,b)=>a+Number(b.total),0);
 
- document.getElementById("stats").innerHTML=`
+ stats.innerHTML=`
  Total Sales: $${revenue.toFixed(2)}<br>
  Transactions: ${data.length}
  `;
 
- el.innerHTML="";
+ transactions.innerHTML="";
 
  data.slice().reverse().forEach(t=>{
- el.innerHTML+=`
+ transactions.innerHTML+=`
  <div class="border p-2 my-2">
- ${t.date} - $${t.total}
+ ${t.date} - $${t.total} (${t.method})
  </div>`;
  });
 
- document.getElementById("dashboard").classList.remove("hidden");
+ dashboard.classList.remove("hidden");
 }
 
 function closeDashboard(){
- document.getElementById("dashboard").classList.add("hidden");
+ dashboard.classList.add("hidden");
 }
+
+// INIT
+const productsDiv = document.getElementById("products");
+const cartDiv = document.getElementById("cart");
+const totalSpan = document.getElementById("total");
 
 renderProducts();
 
