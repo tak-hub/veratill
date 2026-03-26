@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veratill POS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { background: #FFFDD0; }
+</style>
+</head>
+
+<body class="flex h-screen">
+
+<!-- LEFT PANEL -->
+<div class="w-3/4 p-4">
+  <h1 class="text-2xl font-bold text-[#800020] mb-4">Veratill POS</h1>
+
+  <!-- Search -->
+  <input id="search" type="text" placeholder="Search products..."
+    class="w-full p-2 border rounded mb-4">
+
+  <!-- Products -->
+  <div id="products" class="grid grid-cols-4 gap-4"></div>
+</div>
+
+<!-- RIGHT PANEL (CART) -->
+<div class="w-1/4 bg-white p-4 shadow-lg flex flex-col">
+  <h2 class="text-xl font-bold text-[#800020]">Cart</h2>
+
+  <div id="cart" class="flex-1 overflow-auto my-2"></div>
+
+  <label class="flex items-center gap-2">
+    <input type="checkbox" id="taxToggle">
+    Add 15% Tax
+  </label>
+
+  <h3 class="text-lg font-bold mt-2">Total: $<span id="total">0.00</span></h3>
+
+  <button onclick="checkout()"
+    class="bg-[#800020] text-white p-2 mt-2 rounded">
+    Pay
+  </button>
+
+  <button onclick="showDashboard()"
+    class="bg-gray-300 p-2 mt-2 rounded">
+    Dashboard
+  </button>
+</div>
+
+<!-- RECEIPT MODAL -->
+<div id="receiptModal"
+ class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+  <div class="bg-white p-4 w-96">
+    <h2 class="text-xl font-bold text-[#800020]">Receipt</h2>
+    <div id="receiptContent"></div>
+    <button onclick="printReceipt()" class="bg-[#800020] text-white p-2 mt-2">Print</button>
+    <button onclick="closeReceipt()" class="bg-gray-300 p-2 mt-2">Close</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard"
+ class="hidden fixed inset-0 bg-white p-4 overflow-auto">
+  <h2 class="text-2xl font-bold text-[#800020]">Transactions</h2>
+  <div id="transactions"></div>
+  <button onclick="closeDashboard()" class="mt-4 bg-[#800020] text-white p-2">Close</button>
+</div>
+
+<script>
+const products = [
+  {name:"Bread", price:1},
+  {name:"Milk", price:1.5},
+  {name:"Sugar", price:2},
+  {name:"Rice", price:3},
+  {name:"Cooking Oil", price:4},
+  {name:"Soap", price:1.2}
+];
+
+let cart = [];
+
+function renderProducts(list=products){
+  const container = document.getElementById("products");
+  container.innerHTML = "";
+  list.forEach(p=>{
+    container.innerHTML += `
+      <div onclick="addToCart('${p.name}')"
+       class="p-4 bg-white rounded shadow cursor-pointer hover:bg-gray-100">
+        <h3>${p.name}</h3>
+        <p>$${p.price}</p>
+      </div>
+    `;
+  });
+}
+
+function addToCart(name){
+  const item = products.find(p=>p.name===name);
+  cart.push(item);
+  renderCart();
+}
+
+function renderCart(){
+  const container = document.getElementById("cart");
+  container.innerHTML = "";
+  let total = 0;
+
+  cart.forEach((item,i)=>{
+    total += item.price;
+    container.innerHTML += `
+      <div class="flex justify-between">
+        <span>${item.name}</span>
+        <span>$${item.price}</span>
+      </div>
+    `;
+  });
+
+  if(document.getElementById("taxToggle").checked){
+    total *= 1.15;
+  }
+
+  document.getElementById("total").innerText = total.toFixed(2);
+}
+
+document.getElementById("taxToggle").addEventListener("change", renderCart);
+
+document.getElementById("search").addEventListener("input", e=>{
+  const val = e.target.value.toLowerCase();
+  const filtered = products.filter(p=>p.name.toLowerCase().includes(val));
+  renderProducts(filtered);
+});
+
+function checkout(){
+  if(cart.length===0) return alert("Cart is empty");
+
+  const total = document.getElementById("total").innerText;
+
+  const receiptHTML = cart.map(i=>`${i.name} - $${i.price}`).join("<br>");
+  document.getElementById("receiptContent").innerHTML =
+    receiptHTML + `<hr>Total: $${total}`;
+
+  saveTransaction(total);
+
+  document.getElementById("receiptModal").classList.remove("hidden");
+  cart = [];
+  renderCart();
+}
+
+function closeReceipt(){
+  document.getElementById("receiptModal").classList.add("hidden");
+}
+
+function printReceipt(){
+  window.print();
+}
+
+function saveTransaction(total){
+  let data = JSON.parse(localStorage.getItem("transactions")) || [];
+  data.push({date:new Date().toLocaleString(), total});
+  localStorage.setItem("transactions", JSON.stringify(data));
+}
+
+function showDashboard(){
+  const data = JSON.parse(localStorage.getItem("transactions")) || [];
+  const container = document.getElementById("transactions");
+  container.innerHTML = "";
+
+  data.reverse().forEach(t=>{
+    container.innerHTML += `
+      <div class="border p-2 my-2">
+        <p>${t.date}</p>
+        <p>Total: $${t.total}</p>
+      </div>
+    `;
+  });
+
+  document.getElementById("dashboard").classList.remove("hidden");
+}
+
+function closeDashboard(){
+  document.getElementById("dashboard").classList.add("hidden");
+}
+
+renderProducts();
+</script>
+
+</body>
+</html>
