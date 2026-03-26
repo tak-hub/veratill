@@ -6,54 +6,50 @@
 <title>Veratill Pro</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
-
-<!-- Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
-<!-- PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body { background:#FFFDD0; }
+body {
+ background: url('https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da') no-repeat center center fixed;
+ background-size: cover;
+}
 </style>
 </head>
 
 <body class="flex h-screen">
 
+<!-- LOGIN -->
+<div id="loginScreen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60">
+<div class="bg-white p-6 rounded w-80">
+<h2 class="text-xl font-bold text-[#800020]">Login</h2>
+<input id="username" placeholder="Username" class="w-full border p-2 mt-2">
+<input id="password" type="password" placeholder="Password" class="w-full border p-2 mt-2">
+<button onclick="login()" class="bg-[#800020] text-white w-full p-2 mt-3">Login</button>
+</div>
+</div>
+
 <!-- LEFT -->
 <div class="w-3/4 p-4 overflow-auto">
-
 <h1 class="text-2xl font-bold text-[#800020] mb-3">
-<i class="fa-solid fa-cash-register"></i> Veratill Pro
+<i class="fa-solid fa-cash-register"></i> Takushop POS
 </h1>
 
-<!-- Search / Barcode -->
-<div class="flex gap-2 mb-3">
-<input id="search" placeholder="Search or scan barcode..."
- class="w-full p-2 border rounded">
-</div>
+<input id="search" placeholder="Search or scan barcode..." class="w-full p-2 border rounded mb-3">
 
-<!-- Product Grid -->
 <div id="products" class="grid grid-cols-4 gap-4"></div>
-
 </div>
 
-<!-- RIGHT CART -->
+<!-- RIGHT -->
 <div class="w-1/4 bg-white p-4 flex flex-col shadow-lg">
-
-<h2 class="font-bold text-[#800020]">
-<i class="fa-solid fa-cart-shopping"></i> Cart
-</h2>
-
+<h2 class="font-bold text-[#800020]"><i class="fa-solid fa-cart-shopping"></i> Cart</h2>
 <div id="cart" class="flex-1 overflow-auto mt-2"></div>
 
 <label class="flex items-center gap-2">
 <input type="checkbox" id="tax"> Tax (15%)
 </label>
 
-<h3 class="font-bold mt-2">
-Total: $<span id="total">0.00</span>
-</h3>
+<h3 class="font-bold mt-2">Total: $<span id="total">0.00</span></h3>
 
 <button onclick="checkout()" class="bg-[#800020] text-white p-2 mt-2">
 <i class="fa-solid fa-money-bill"></i> Pay
@@ -62,33 +58,55 @@ Total: $<span id="total">0.00</span>
 <button onclick="showDashboard()" class="bg-gray-300 p-2 mt-2">
 <i class="fa-solid fa-chart-line"></i> Dashboard
 </button>
-
 </div>
 
 <!-- DASHBOARD -->
 <div id="dashboard" class="hidden fixed inset-0 bg-white p-5 overflow-auto">
-
 <h2 class="text-2xl text-[#800020] font-bold">Sales Dashboard</h2>
-
 <div id="stats" class="my-3"></div>
 <div id="transactions"></div>
-
 <button onclick="closeDashboard()" class="bg-[#800020] text-white p-2 mt-3">Close</button>
-
 </div>
 
 <script>
 
+// USERS
+const users = [
+ {username:"admin", password:"1234", role:"admin"},
+ {username:"cashier", password:"1234", role:"cashier"}
+];
+
+let currentUser = null;
+
+// PRODUCTS
 const products = [
  {id:1,name:"Bread",price:1,stock:20,barcode:"111"},
  {id:2,name:"Milk",price:1.5,stock:15,barcode:"222"},
  {id:3,name:"Sugar",price:2,stock:10,barcode:"333"},
  {id:4,name:"Rice",price:3,stock:8,barcode:"444"},
  {id:5,name:"Cooking Oil",price:4,stock:5,barcode:"555"},
+ {id:6,name:"TV 32inch",price:150,stock:3,barcode:"666"},
+ {id:7,name:"Headphones",price:25,stock:10,barcode:"777"},
+ {id:8,name:"Toothpaste",price:2,stock:30,barcode:"888"},
+ {id:9,name:"Laundry Powder",price:5,stock:12,barcode:"999"}
 ];
 
 let cart = {};
 
+// LOGIN
+function login(){
+ let u = document.getElementById("username").value;
+ let p = document.getElementById("password").value;
+
+ let user = users.find(x=>x.username===u && x.password===p);
+
+ if(!user) return alert("Invalid login");
+
+ currentUser = user;
+ document.getElementById("loginScreen").style.display="none";
+}
+
+// PRODUCTS
 function renderProducts(list=products){
  let el = document.getElementById("products");
  el.innerHTML="";
@@ -103,11 +121,11 @@ function renderProducts(list=products){
   <p class="text-sm ${p.stock<5?'text-red-500':''}">
   Stock: ${p.stock}
   </p>
-
   </div>`;
  });
 }
 
+// CART
 function addToCart(id){
  let p = products.find(x=>x.id===id);
  if(p.stock<=0) return alert("Out of stock");
@@ -163,6 +181,7 @@ function changeQty(id,val){
  renderCart();
 }
 
+// SEARCH / BARCODE
 document.getElementById("search").addEventListener("input",e=>{
  let val=e.target.value;
 
@@ -174,19 +193,27 @@ document.getElementById("search").addEventListener("input",e=>{
  renderProducts(filtered);
 });
 
+// RECEIPT NUMBER
+function getReceiptNumber(){
+ let num = localStorage.getItem("receiptNo") || 1;
+ localStorage.setItem("receiptNo", Number(num)+1);
+ return num;
+}
+
+// CHECKOUT
 function checkout(){
  if(Object.keys(cart).length===0) return alert("Empty cart");
 
  let total=document.getElementById("total").innerText;
 
  saveTransaction(total);
-
  generatePDF(total);
 
  cart={};
  renderCart();
 }
 
+// SAVE TX
 function saveTransaction(total){
  let data=JSON.parse(localStorage.getItem("tx"))||[];
  data.push({
@@ -196,6 +223,35 @@ function saveTransaction(total){
  localStorage.setItem("tx",JSON.stringify(data));
 }
 
+// PDF RECEIPT
+function generatePDF(total){
+ const { jsPDF } = window.jspdf;
+ let doc = new jsPDF();
+
+ let receiptNo = getReceiptNumber();
+ let date = new Date().toLocaleString();
+
+ doc.text("TAKUSHOP", 20,20);
+ doc.text("Cashier: "+currentUser.username,20,30);
+
+ doc.text("Receipt No: "+receiptNo,20,40);
+ doc.text("Date: "+date,20,50);
+
+ let y=60;
+
+ Object.values(cart).forEach(item=>{
+ doc.text(`${item.name} x${item.qty} - $${item.price}`,20,y);
+ y+=10;
+ });
+
+ doc.text("Total: $"+total,20,y+10);
+
+ doc.text(`Thank you for buying at Takushop on ${date}`,20,y+25);
+
+ doc.save(`receipt_${receiptNo}.pdf`);
+}
+
+// DASHBOARD
 function showDashboard(){
  let data=JSON.parse(localStorage.getItem("tx"))||[];
  let el=document.getElementById("transactions");
@@ -221,24 +277,6 @@ function showDashboard(){
 
 function closeDashboard(){
  document.getElementById("dashboard").classList.add("hidden");
-}
-
-function generatePDF(total){
- const { jsPDF } = window.jspdf;
- let doc = new jsPDF();
-
- doc.text("VERATILL RECEIPT", 20,20);
-
- let y=30;
-
- Object.values(cart).forEach(item=>{
- doc.text(`${item.name} x${item.qty} - $${item.price}`,20,y);
- y+=10;
- });
-
- doc.text("Total: $"+total,20,y+10);
-
- doc.save("receipt.pdf");
 }
 
 renderProducts();
