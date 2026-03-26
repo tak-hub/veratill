@@ -3,184 +3,246 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Veratill POS</title>
+<title>Veratill Pro</title>
+
 <script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<!-- PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
-  body { background: #FFFDD0; }
+body { background:#FFFDD0; }
 </style>
 </head>
 
 <body class="flex h-screen">
 
-<!-- LEFT PANEL -->
-<div class="w-3/4 p-4">
-  <h1 class="text-2xl font-bold text-[#800020] mb-4">Veratill POS</h1>
+<!-- LEFT -->
+<div class="w-3/4 p-4 overflow-auto">
 
-  <!-- Search -->
-  <input id="search" type="text" placeholder="Search products..."
-    class="w-full p-2 border rounded mb-4">
+<h1 class="text-2xl font-bold text-[#800020] mb-3">
+<i class="fa-solid fa-cash-register"></i> Veratill Pro
+</h1>
 
-  <!-- Products -->
-  <div id="products" class="grid grid-cols-4 gap-4"></div>
+<!-- Search / Barcode -->
+<div class="flex gap-2 mb-3">
+<input id="search" placeholder="Search or scan barcode..."
+ class="w-full p-2 border rounded">
 </div>
 
-<!-- RIGHT PANEL (CART) -->
-<div class="w-1/4 bg-white p-4 shadow-lg flex flex-col">
-  <h2 class="text-xl font-bold text-[#800020]">Cart</h2>
+<!-- Product Grid -->
+<div id="products" class="grid grid-cols-4 gap-4"></div>
 
-  <div id="cart" class="flex-1 overflow-auto my-2"></div>
-
-  <label class="flex items-center gap-2">
-    <input type="checkbox" id="taxToggle">
-    Add 15% Tax
-  </label>
-
-  <h3 class="text-lg font-bold mt-2">Total: $<span id="total">0.00</span></h3>
-
-  <button onclick="checkout()"
-    class="bg-[#800020] text-white p-2 mt-2 rounded">
-    Pay
-  </button>
-
-  <button onclick="showDashboard()"
-    class="bg-gray-300 p-2 mt-2 rounded">
-    Dashboard
-  </button>
 </div>
 
-<!-- RECEIPT MODAL -->
-<div id="receiptModal"
- class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-  <div class="bg-white p-4 w-96">
-    <h2 class="text-xl font-bold text-[#800020]">Receipt</h2>
-    <div id="receiptContent"></div>
-    <button onclick="printReceipt()" class="bg-[#800020] text-white p-2 mt-2">Print</button>
-    <button onclick="closeReceipt()" class="bg-gray-300 p-2 mt-2">Close</button>
-  </div>
+<!-- RIGHT CART -->
+<div class="w-1/4 bg-white p-4 flex flex-col shadow-lg">
+
+<h2 class="font-bold text-[#800020]">
+<i class="fa-solid fa-cart-shopping"></i> Cart
+</h2>
+
+<div id="cart" class="flex-1 overflow-auto mt-2"></div>
+
+<label class="flex items-center gap-2">
+<input type="checkbox" id="tax"> Tax (15%)
+</label>
+
+<h3 class="font-bold mt-2">
+Total: $<span id="total">0.00</span>
+</h3>
+
+<button onclick="checkout()" class="bg-[#800020] text-white p-2 mt-2">
+<i class="fa-solid fa-money-bill"></i> Pay
+</button>
+
+<button onclick="showDashboard()" class="bg-gray-300 p-2 mt-2">
+<i class="fa-solid fa-chart-line"></i> Dashboard
+</button>
+
 </div>
 
 <!-- DASHBOARD -->
-<div id="dashboard"
- class="hidden fixed inset-0 bg-white p-4 overflow-auto">
-  <h2 class="text-2xl font-bold text-[#800020]">Transactions</h2>
-  <div id="transactions"></div>
-  <button onclick="closeDashboard()" class="mt-4 bg-[#800020] text-white p-2">Close</button>
+<div id="dashboard" class="hidden fixed inset-0 bg-white p-5 overflow-auto">
+
+<h2 class="text-2xl text-[#800020] font-bold">Sales Dashboard</h2>
+
+<div id="stats" class="my-3"></div>
+<div id="transactions"></div>
+
+<button onclick="closeDashboard()" class="bg-[#800020] text-white p-2 mt-3">Close</button>
+
 </div>
 
 <script>
+
 const products = [
-  {name:"Bread", price:1},
-  {name:"Milk", price:1.5},
-  {name:"Sugar", price:2},
-  {name:"Rice", price:3},
-  {name:"Cooking Oil", price:4},
-  {name:"Soap", price:1.2}
+ {id:1,name:"Bread",price:1,stock:20,barcode:"111"},
+ {id:2,name:"Milk",price:1.5,stock:15,barcode:"222"},
+ {id:3,name:"Sugar",price:2,stock:10,barcode:"333"},
+ {id:4,name:"Rice",price:3,stock:8,barcode:"444"},
+ {id:5,name:"Cooking Oil",price:4,stock:5,barcode:"555"},
 ];
 
-let cart = [];
+let cart = {};
 
 function renderProducts(list=products){
-  const container = document.getElementById("products");
-  container.innerHTML = "";
-  list.forEach(p=>{
-    container.innerHTML += `
-      <div onclick="addToCart('${p.name}')"
-       class="p-4 bg-white rounded shadow cursor-pointer hover:bg-gray-100">
-        <h3>${p.name}</h3>
-        <p>$${p.price}</p>
-      </div>
-    `;
-  });
+ let el = document.getElementById("products");
+ el.innerHTML="";
+
+ list.forEach(p=>{
+  el.innerHTML += `
+  <div onclick="addToCart(${p.id})"
+  class="bg-white p-3 rounded shadow cursor-pointer">
+
+  <h3>${p.name}</h3>
+  <p>$${p.price}</p>
+  <p class="text-sm ${p.stock<5?'text-red-500':''}">
+  Stock: ${p.stock}
+  </p>
+
+  </div>`;
+ });
 }
 
-function addToCart(name){
-  const item = products.find(p=>p.name===name);
-  cart.push(item);
-  renderCart();
+function addToCart(id){
+ let p = products.find(x=>x.id===id);
+ if(p.stock<=0) return alert("Out of stock");
+
+ if(!cart[id]) cart[id]={...p,qty:0};
+
+ cart[id].qty++;
+ p.stock--;
+
+ renderProducts();
+ renderCart();
 }
 
 function renderCart(){
-  const container = document.getElementById("cart");
-  container.innerHTML = "";
-  let total = 0;
+ let el=document.getElementById("cart");
+ el.innerHTML="";
+ let total=0;
 
-  cart.forEach((item,i)=>{
-    total += item.price;
-    container.innerHTML += `
-      <div class="flex justify-between">
-        <span>${item.name}</span>
-        <span>$${item.price}</span>
-      </div>
-    `;
-  });
+ Object.values(cart).forEach(item=>{
+  let sub=item.qty*item.price;
+  total+=sub;
 
-  if(document.getElementById("taxToggle").checked){
-    total *= 1.15;
-  }
+  el.innerHTML+=`
+  <div class="flex justify-between items-center border-b py-1">
+  <span>${item.name} x${item.qty}</span>
 
-  document.getElementById("total").innerText = total.toFixed(2);
+  <div>
+  <button onclick="changeQty(${item.id},-1)">-</button>
+  <button onclick="changeQty(${item.id},1)">+</button>
+  </div>
+
+  <span>$${sub.toFixed(2)}</span>
+  </div>`;
+ });
+
+ if(document.getElementById("tax").checked) total*=1.15;
+
+ document.getElementById("total").innerText=total.toFixed(2);
 }
 
-document.getElementById("taxToggle").addEventListener("change", renderCart);
+function changeQty(id,val){
+ let item=cart[id];
+ if(!item) return;
 
-document.getElementById("search").addEventListener("input", e=>{
-  const val = e.target.value.toLowerCase();
-  const filtered = products.filter(p=>p.name.toLowerCase().includes(val));
-  renderProducts(filtered);
+ item.qty+=val;
+
+ let p=products.find(x=>x.id===id);
+ p.stock-=val;
+
+ if(item.qty<=0) delete cart[id];
+
+ renderProducts();
+ renderCart();
+}
+
+document.getElementById("search").addEventListener("input",e=>{
+ let val=e.target.value;
+
+ let filtered=products.filter(p=>
+ p.name.toLowerCase().includes(val.toLowerCase()) ||
+ p.barcode.includes(val)
+ );
+
+ renderProducts(filtered);
 });
 
 function checkout(){
-  if(cart.length===0) return alert("Cart is empty");
+ if(Object.keys(cart).length===0) return alert("Empty cart");
 
-  const total = document.getElementById("total").innerText;
+ let total=document.getElementById("total").innerText;
 
-  const receiptHTML = cart.map(i=>`${i.name} - $${i.price}`).join("<br>");
-  document.getElementById("receiptContent").innerHTML =
-    receiptHTML + `<hr>Total: $${total}`;
+ saveTransaction(total);
 
-  saveTransaction(total);
+ generatePDF(total);
 
-  document.getElementById("receiptModal").classList.remove("hidden");
-  cart = [];
-  renderCart();
-}
-
-function closeReceipt(){
-  document.getElementById("receiptModal").classList.add("hidden");
-}
-
-function printReceipt(){
-  window.print();
+ cart={};
+ renderCart();
 }
 
 function saveTransaction(total){
-  let data = JSON.parse(localStorage.getItem("transactions")) || [];
-  data.push({date:new Date().toLocaleString(), total});
-  localStorage.setItem("transactions", JSON.stringify(data));
+ let data=JSON.parse(localStorage.getItem("tx"))||[];
+ data.push({
+ date:new Date().toLocaleString(),
+ total
+ });
+ localStorage.setItem("tx",JSON.stringify(data));
 }
 
 function showDashboard(){
-  const data = JSON.parse(localStorage.getItem("transactions")) || [];
-  const container = document.getElementById("transactions");
-  container.innerHTML = "";
+ let data=JSON.parse(localStorage.getItem("tx"))||[];
+ let el=document.getElementById("transactions");
 
-  data.reverse().forEach(t=>{
-    container.innerHTML += `
-      <div class="border p-2 my-2">
-        <p>${t.date}</p>
-        <p>Total: $${t.total}</p>
-      </div>
-    `;
-  });
+ let revenue=data.reduce((a,b)=>a+Number(b.total),0);
 
-  document.getElementById("dashboard").classList.remove("hidden");
+ document.getElementById("stats").innerHTML=`
+ Total Sales: $${revenue.toFixed(2)}<br>
+ Transactions: ${data.length}
+ `;
+
+ el.innerHTML="";
+
+ data.slice().reverse().forEach(t=>{
+ el.innerHTML+=`
+ <div class="border p-2 my-2">
+ ${t.date} - $${t.total}
+ </div>`;
+ });
+
+ document.getElementById("dashboard").classList.remove("hidden");
 }
 
 function closeDashboard(){
-  document.getElementById("dashboard").classList.add("hidden");
+ document.getElementById("dashboard").classList.add("hidden");
+}
+
+function generatePDF(total){
+ const { jsPDF } = window.jspdf;
+ let doc = new jsPDF();
+
+ doc.text("VERATILL RECEIPT", 20,20);
+
+ let y=30;
+
+ Object.values(cart).forEach(item=>{
+ doc.text(`${item.name} x${item.qty} - $${item.price}`,20,y);
+ y+=10;
+ });
+
+ doc.text("Total: $"+total,20,y+10);
+
+ doc.save("receipt.pdf");
 }
 
 renderProducts();
+
 </script>
 
 </body>
